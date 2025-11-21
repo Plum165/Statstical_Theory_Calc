@@ -1,125 +1,129 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="cat-noir">
 <head>
-  <meta charset="utf-8"/>
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Interactive Stats Calculator — UAVPath / STA</title>
+  <title>Interactive Stats Calculator — STA2030</title>
 
-  <!-- Tailwind CDN (for quick prototyping) -->
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- MathJax -->
+  <!-- MathJax Configuration -->
   <script>
-    window.MathJax = { tex: { inlineMath: [['$','$'], ['\\(','\\)']] } };
+    window.MathJax = {
+      tex: { 
+        inlineMath: [['$','$'], ['\\(','\\)']],
+        displayMath: [['$$','$$'], ['\\[','\\]']],
+        processEscapes: true
+      },
+      svg: { fontCache: 'global' },
+      startup: {
+        typeset: false // We will trigger typeset manually in JS
+      }
+    };
   </script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 
-  <!-- Chart.js -->
+  <!-- External Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- math.js (numerics & parser) -->
   <script src="https://cdn.jsdelivr.net/npm/mathjs@11.8.0/lib/browser/math.js"></script>
 
-  <link rel="stylesheet" href="style.css">
+   <link rel="stylesheet" href="style.css">
+  
 </head>
-<body class="bg-slate-900 text-slate-100">
-  <header class="p-6 max-w-6xl mx-auto flex items-center justify-between">
-    <div>
-      <h1 class="text-2xl font-bold">Interactive Stats Calculator (STA2030S)</h1>
-      <p class="text-sm text-slate-300">MGFs, Expectations, Transformations, Conditional moments & formula sheet</p>
-    </div>
-    <div class="space-x-2">
-      <button id="btn-refresh" class="px-3 py-1 bg-slate-700 rounded">Refresh MathJax</button>
-      <a id="notes-link" class="px-3 py-1 bg-emerald-600 rounded" target="_blank">Open STA2030S Notes</a>
+<body class="antialiased selection:bg-red-500 selection:text-white">
+
+  <!-- HEADER -->
+  <header class="max-w-7xl mx-auto p-4 md:p-6">
+    <div class="glass rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">Interactive Stats <span class="text-red-400">STA2030</span></h1>
+        <p class="text-sm opacity-80 mt-1">Advanced Distribution Analyzer & Step-by-Step Solver</p>
+      </div>
+      
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        <div class="flex items-center gap-2 bg-black/20 rounded-lg p-1 pr-3">
+          <span id="theme-chip" class="w-4 h-4 rounded-full bg-red-500 ml-2"></span>
+          <select id="theme-dropdown" class="bg-transparent text-sm border-none outline-none text-white/90 cursor-pointer">
+            <option value="cat-noir">Cat Noir (Default)</option>
+            <option value="spiderman">Spiderman</option>
+            <option value="bloodred">Blood Theme</option>
+            <option value="sapphire-steel">Sapphire & Steel</option>
+            <option value="emerald-charcoal">Emerald & Charcoal</option>
+            <option value="cyberpunk-glow">Cyberpunk</option>
+          </select>
+        </div>
+        <a href="exam.html" class="btn btn-link" target="_blank">Exam Mode ↗</a>
+        <button id="print-btn" class="btn btn-ghost text-sm" onclick="window.print()">🖨 Print</button>
+      </div>
     </div>
   </header>
 
-  <main class="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
-    <!-- Left column: topics -->
-    <aside class="col-span-1 bg-slate-800 rounded p-4 space-y-4">
-      <div>
-        <label class="block text-sm text-slate-300 mb-2">Mode</label>
-        <div class="flex gap-2">
-          <button class="mode-btn px-3 py-1 bg-emerald-600 rounded" data-mode="known">Known Distributions</button>
-          <button class="mode-btn px-3 py-1 bg-slate-700 rounded" data-mode="chapters">Chapters 1–5</button>
-          <button class="mode-btn px-3 py-1 bg-slate-700 rounded" data-mode="all">All</button>
+  <!-- MAIN APP LAYOUT -->
+  <main class="max-w-7xl mx-auto p-4 md:p-6 grid-large">
+    
+    <!-- LEFT SIDEBAR: NAVIGATION -->
+    <aside class="glass p-5 rounded-xl h-fit">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-bold">Curriculum</h2>
+        <span class="text-xs bg-white/10 px-2 py-1 rounded text-accent">STA2030</span>
+      </div>
+      
+      <p class="mt-2 text-sm opacity-70 mb-4">Select a chapter or tool category.</p>
+
+      <!-- Category Tabs -->
+      <nav class="grid grid-cols-2 gap-2" aria-label="main-navigation">
+        <button class="nav-tab btn btn-ghost active" data-category="known">Known Dists</button>
+        <button class="nav-tab btn btn-ghost" data-category="ch1">Ch 1</button>
+        <button class="nav-tab btn btn-ghost" data-category="ch2">Ch 2</button>
+        <button class="nav-tab btn btn-ghost" data-category="ch3">Ch 3</button>
+        <button class="nav-tab btn btn-ghost" data-category="ch4">Ch 4</button>
+        <button class="nav-tab btn btn-ghost" data-category="ch5">Ch 5</button>
+        <button class="nav-tab btn btn-ghost col-span-2 border-dashed" data-category="formulae">Formulae & Rules</button>
+      </nav>
+
+      <div class="solid-divider"></div>
+
+      <!-- Dynamic Topic List (Injected by script.js) -->
+      <div id="topic-menu" class="space-y-2 max-h-[500px] overflow-y-auto pr-1 scrollbar-thin">
+        <!-- Javascript will populate this based on the selected tab -->
+        <div class="animate-pulse flex flex-col gap-2">
+            <div class="h-10 bg-white/5 rounded"></div>
+            <div class="h-10 bg-white/5 rounded"></div>
+            <div class="h-10 bg-white/5 rounded"></div>
         </div>
       </div>
 
-      <div>
-        <label class="block text-sm text-slate-300 mb-2">Topics</label>
-        <div id="topics" class="space-y-2 max-h-[60vh] overflow-auto pr-2"></div>
-      </div>
-
-      <div>
-        <button id="btn-formula-sheet" class="w-full mt-3 px-3 py-2 bg-indigo-600 rounded">Formula Sheet</button>
+      <div class="mt-6 pt-4 border-t border-white/5 text-xs text-center opacity-50 font-mono">
+        System Status: <span class="text-green-400">Online</span> • v5.0.1
       </div>
     </aside>
 
-    <!-- Right / Main content -->
-    <section id="main-panel" class="col-span-3 bg-slate-800 rounded p-6 space-y-6">
+    <!-- RIGHT CONTENT: CALCULATOR INTERFACE -->
+    <section class="glass p-6 rounded-xl min-h-[600px] relative">
+      
+      <!-- The Root Container for all Dynamic Modules -->
       <div id="topic-root">
-        <h2 class="text-xl font-semibold" id="topic-title">Welcome</h2>
-        <div id="topic-description" class="text-slate-300 mt-2">
-          <p>Select a topic on the left to begin. Use the formula sheet for reference.</p>
-        </div>
-
-        <!-- Dynamic controls will be injected here -->
-        <div id="topic-controls" class="mt-4"></div>
-
-        <!-- Results & Steps -->
-        <div id="topic-results" class="mt-6 bg-slate-900 p-4 rounded hidden">
-          <h3 class="font-semibold">Results</h3>
-          <div id="result-text" class="mt-2 text-slate-200"></div>
-          <div id="result-steps" class="mt-4 text-slate-300"></div>
-        </div>
-
-        <!-- Charts -->
-        <div id="topic-charts" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
-          <canvas id="pdf-chart"></canvas>
-          <canvas id="cdf-chart"></canvas>
-        </div>
-      </div>
-
-      <!-- Formula sheet viewer -->
-      <div id="formula-sheet" class="hidden">
-        <h3 class="text-lg font-semibold">Formula Sheet & Notes</h3>
-        <p class="text-slate-300 mt-2">Open the official notes (STA2030S) or use the quick formula cards below.</p>
-        <div class="mt-4 space-y-3">
-          <a id="open-notes" class="text-emerald-300 underline" target="_blank">Open STA2030S Notes (PDF)</a>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-            <div class="p-3 bg-slate-700 rounded">
-              <h4 class="font-semibold">MGF</h4>
-              <div class="mt-1 text-sm">For X: $M_X(t)=E[e^{tX}]=\int e^{tx} f_X(x)\,dx$ (continuous) or $\sum e^{tx} p_X(x)$ (discrete).</div>
-            </div>
-            <div class="p-3 bg-slate-700 rounded">
-              <h4 class="font-semibold">Expectation</h4>
-              <div class="mt-1 text-sm">$E[X]=\int x f_X(x)\,dx$ or $\sum x p_X(x)$. Conditional: $E[X|Y=y]=\int x f_{X|Y}(x|y)dx$.</div>
-            </div>
-            <div class="p-3 bg-slate-700 rounded">
-              <h4 class="font-semibold">Transforms</h4>
-              <div class="mt-1 text-sm">For $Y=g(X)$ use CDF technique: $F_Y(y)=P(g(X)\le y)$, then differentiate. For monotone $g$, $f_Y(y)=f_X(g^{-1}(y))\cdot |d/dy(g^{-1}(y))|$.</div>
-            </div>
-            <div class="p-3 bg-slate-700 rounded">
-              <h4 class="font-semibold">Convolution (sum)</h4>
-              <div class="mt-1 text-sm">If $W=X+Y$ independent, $f_W(w)=\int f_X(x) f_Y(w-x)\,dx$.</div>
-            </div>
-          </div>
+        <!-- Default State (Overwritten by JS immediately, but good for SEO/Fallback) -->
+        <div class="flex flex-col items-center justify-center h-[400px] text-center opacity-60">
+          <svg class="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+          </svg>
+          <h3 class="text-xl font-bold">Select a Module</h3>
+          <p class="max-w-sm mt-2">Choose a distribution or chapter from the left menu to begin analysis.</p>
         </div>
       </div>
 
     </section>
+
   </main>
 
-  <footer class="max-w-6xl mx-auto p-6 text-sm text-slate-400">© Moegamat Samsodien — Interactive Stats Calculator</footer>
+  <footer class="max-w-7xl mx-auto p-6 text-center text-sm opacity-60">
+    <p>&copy; <span id="year">2025</span> Moegamat Samsodien. Built for STA2030.</p>
+  </footer>
 
-  <script>
-    // Link to the uploaded STA2030S notes (local path the system has)
-    const NOTES_PDF = '/mnt/data/STA2030S Notes.pdf';
-    document.getElementById('notes-link').href = NOTES_PDF;
-    document.getElementById('open-notes').href = NOTES_PDF;
-  </script>
-
+  <!-- Core Application Logic -->
   <script src="script.js"></script>
+
 </body>
 </html>
