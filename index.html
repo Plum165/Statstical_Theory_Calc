@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Interactive Stats Calculator — UAVPath / STA</title>
+
+  <!-- Tailwind CDN (for quick prototyping) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- MathJax -->
+  <script>
+    window.MathJax = { tex: { inlineMath: [['$','$'], ['\\(','\\)']] } };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- math.js (numerics & parser) -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@11.8.0/lib/browser/math.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-900 text-slate-100">
+  <header class="p-6 max-w-6xl mx-auto flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold">Interactive Stats Calculator (STA2030S)</h1>
+      <p class="text-sm text-slate-300">MGFs, Expectations, Transformations, Conditional moments & formula sheet</p>
+    </div>
+    <div class="space-x-2">
+      <button id="btn-refresh" class="px-3 py-1 bg-slate-700 rounded">Refresh MathJax</button>
+      <a id="notes-link" class="px-3 py-1 bg-emerald-600 rounded" target="_blank">Open STA2030S Notes</a>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <!-- Left column: topics -->
+    <aside class="col-span-1 bg-slate-800 rounded p-4 space-y-4">
+      <div>
+        <label class="block text-sm text-slate-300 mb-2">Mode</label>
+        <div class="flex gap-2">
+          <button class="mode-btn px-3 py-1 bg-emerald-600 rounded" data-mode="known">Known Distributions</button>
+          <button class="mode-btn px-3 py-1 bg-slate-700 rounded" data-mode="chapters">Chapters 1–5</button>
+          <button class="mode-btn px-3 py-1 bg-slate-700 rounded" data-mode="all">All</button>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm text-slate-300 mb-2">Topics</label>
+        <div id="topics" class="space-y-2 max-h-[60vh] overflow-auto pr-2"></div>
+      </div>
+
+      <div>
+        <button id="btn-formula-sheet" class="w-full mt-3 px-3 py-2 bg-indigo-600 rounded">Formula Sheet</button>
+      </div>
+    </aside>
+
+    <!-- Right / Main content -->
+    <section id="main-panel" class="col-span-3 bg-slate-800 rounded p-6 space-y-6">
+      <div id="topic-root">
+        <h2 class="text-xl font-semibold" id="topic-title">Welcome</h2>
+        <div id="topic-description" class="text-slate-300 mt-2">
+          <p>Select a topic on the left to begin. Use the formula sheet for reference.</p>
+        </div>
+
+        <!-- Dynamic controls will be injected here -->
+        <div id="topic-controls" class="mt-4"></div>
+
+        <!-- Results & Steps -->
+        <div id="topic-results" class="mt-6 bg-slate-900 p-4 rounded hidden">
+          <h3 class="font-semibold">Results</h3>
+          <div id="result-text" class="mt-2 text-slate-200"></div>
+          <div id="result-steps" class="mt-4 text-slate-300"></div>
+        </div>
+
+        <!-- Charts -->
+        <div id="topic-charts" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+          <canvas id="pdf-chart"></canvas>
+          <canvas id="cdf-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Formula sheet viewer -->
+      <div id="formula-sheet" class="hidden">
+        <h3 class="text-lg font-semibold">Formula Sheet & Notes</h3>
+        <p class="text-slate-300 mt-2">Open the official notes (STA2030S) or use the quick formula cards below.</p>
+        <div class="mt-4 space-y-3">
+          <a id="open-notes" class="text-emerald-300 underline" target="_blank">Open STA2030S Notes (PDF)</a>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+            <div class="p-3 bg-slate-700 rounded">
+              <h4 class="font-semibold">MGF</h4>
+              <div class="mt-1 text-sm">For X: $M_X(t)=E[e^{tX}]=\int e^{tx} f_X(x)\,dx$ (continuous) or $\sum e^{tx} p_X(x)$ (discrete).</div>
+            </div>
+            <div class="p-3 bg-slate-700 rounded">
+              <h4 class="font-semibold">Expectation</h4>
+              <div class="mt-1 text-sm">$E[X]=\int x f_X(x)\,dx$ or $\sum x p_X(x)$. Conditional: $E[X|Y=y]=\int x f_{X|Y}(x|y)dx$.</div>
+            </div>
+            <div class="p-3 bg-slate-700 rounded">
+              <h4 class="font-semibold">Transforms</h4>
+              <div class="mt-1 text-sm">For $Y=g(X)$ use CDF technique: $F_Y(y)=P(g(X)\le y)$, then differentiate. For monotone $g$, $f_Y(y)=f_X(g^{-1}(y))\cdot |d/dy(g^{-1}(y))|$.</div>
+            </div>
+            <div class="p-3 bg-slate-700 rounded">
+              <h4 class="font-semibold">Convolution (sum)</h4>
+              <div class="mt-1 text-sm">If $W=X+Y$ independent, $f_W(w)=\int f_X(x) f_Y(w-x)\,dx$.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <footer class="max-w-6xl mx-auto p-6 text-sm text-slate-400">© Moegamat Samsodien — Interactive Stats Calculator</footer>
+
+  <script>
+    // Link to the uploaded STA2030S notes (local path the system has)
+    const NOTES_PDF = '/mnt/data/STA2030S Notes.pdf';
+    document.getElementById('notes-link').href = NOTES_PDF;
+    document.getElementById('open-notes').href = NOTES_PDF;
+  </script>
+
+  <script src="script.js"></script>
+</body>
+</html>
