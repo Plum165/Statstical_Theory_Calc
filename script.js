@@ -115,51 +115,66 @@ const StatCore = {
         } catch(e) { return NaN; }
     },
 
-     parseRange: (rangeStr) => {
-        // 1. Clean Input: Remove spaces, Lowercase, Normalise inequalities
-        // This fixes the "NaN" issue by turning "0 <= x <= 5" into "0<x<5" before parsing
+    parseRange: (rangeStr) => {
+        // 1. Clean Input: Remove spaces, normalise inequalities
         let s = rangeStr.toLowerCase().replace(/\s/g, '');
         s = s.replace(/<=/g, '<').replace(/>=/g, '>');
 
-        // 2. Check for "Between" case: min < x < max
-        if (s.includes('<x<')) {
-            const parts = s.split('<x<');
+        // 2. CHECK CONTINUOUS: Look for Inequalities (<, >) or Infinity
+        // We only assume Continuous if we explicitly see math symbols
+        if (s.includes('<') || s.includes('>') || s.includes('inf')) {
+            let bounds = { min: -Infinity, max: Infinity };
+
+            // Case A: Between "0 < x < 5"
+            if (s.includes('<x<')) {
+                const parts = s.split('<x<');
+                
+                let min = parseFloat(parts[0]);
+                if (parts[0].includes('inf') && parts[0].includes('-')) min = -Infinity;
+                else if (isNaN(min)) min = -Infinity;
+
+                let max = parseFloat(parts[1]);
+                if (parts[1].includes('inf')) max = Infinity;
+                else if (isNaN(max)) max = Infinity;
+
+                return { type: 'continuous', min: min, max: max };
+            }
+
+            // Case B: Single Bound "x > 0"
+            if (s.includes('x>')) {
+                const val = parseFloat(s.split('x>')[1]);
+                bounds.min = isNaN(val) ? -Infinity : val;
+            }
+            // Case C: Single Bound "x < 5"
+            else if (s.includes('x<')) {
+                const val = parseFloat(s.split('x<')[1]);
+                bounds.max = isNaN(val) ? Infinity : val;
+            }
+            // Case D: Explicit "0 to inf" text
+            else if (s.includes('inf') && s.includes('0')) {
+                bounds.min = 0;
+            }
             
-            // Parse Min
-            let min = parseFloat(parts[0]);
-            if (parts[0].includes('inf') && parts[0].includes('-')) min = -Infinity;
-            else if (isNaN(min)) min = -Infinity; // Fallback
-
-            // Parse Max
-            let max = parseFloat(parts[1]);
-            if (parts[1].includes('inf')) max = Infinity;
-            else if (isNaN(max)) max = Infinity; // Fallback
-
-            return { type: 'continuous', min: min, max: max };
+            return { type: 'continuous', min: bounds.min, max: bounds.max };
         }
 
-        // 3. Check for Single Bounds
-        let bounds = { min: -Infinity, max: Infinity };
-
-        if (s.includes('x>')) { // x > 0
-             const val = parseFloat(s.split('x>')[1]);
-             bounds.min = val;
-        }
-        else if (s.includes('x<')) { // x < 5
-             const val = parseFloat(s.split('x<')[1]);
-             bounds.max = val;
-        }
-        // "0 to infinity" text support
-        else if (s.includes('inf') && s.includes('0')) {
-            bounds.min = 0;
-        }
-        // Discrete case (1,2,3)
-        else if (s.includes(',') || s.includes('=')) {
-            const parts = s.replace(/x=/g, '').split(',').map(n => parseFloat(n));
-            return { type: 'discrete', values: parts.filter(n => !isNaN(n)) };
+        // 3. CHECK DISCRETE: If no inequalities, assume Discrete.
+        // Strip out everything that isn't a number, comma, dot, or minus.
+        // This makes "x = 1, 2, 3" turn into "1,2,3" which is parsable.
+        const cleanDiscrete = s.replace(/[^0-9.,-]/g, ''); 
+        
+        if (cleanDiscrete.length > 0) {
+            // Split by comma, parse floats, filter out NaNs
+            const parts = cleanDiscrete.split(',').map(n => parseFloat(n));
+            const validValues = parts.filter(n => !isNaN(n));
+            
+            if (validValues.length > 0) {
+                return { type: 'discrete', values: validValues };
+            }
         }
 
-        return { type: 'continuous', min: bounds.min, max: bounds.max };
+        // 4. Fallback (If logic fails, default to standard continuous)
+        return { type: 'continuous', min: -Infinity, max: Infinity };
     },
     validateDistribution: (funcStr, rangeObj) => {
         let total = 0;
